@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import queue
 import re
+import subprocess
 import sys
 import threading
 from contextlib import asynccontextmanager
@@ -174,7 +175,19 @@ class Player:
             self._close_stream_locked()
 
     def _open_stream_locked(self) -> None:
-        """Open a stream against the *current* system default output. Caller holds _stream_lock."""
+        """Open a stream against the *current* system default output. Caller holds _stream_lock.
+
+        Refreshes PortAudio first — without this, Pa_GetDefaultOutputDevice()
+        returns whatever was the default at process startup, and reopening
+        the stream doesn't actually switch devices when the system default
+        has changed (e.g. Bluetooth headphones connected mid-session).
+        """
+        try:
+            sd._terminate()
+            sd._initialize()
+        except Exception as exc:  # noqa: BLE001
+            print(f"[kokoro] PortAudio refresh failed: {exc}", file=sys.stderr, flush=True)
+
         try:
             default_info = sd.query_devices(kind="output")
             name = default_info.get("name", "(unknown)") if isinstance(default_info, dict) else "(unknown)"
@@ -207,12 +220,41 @@ class Player:
         self._stream = None
         self._current_device_name = None
 
+    def _query_current_default_via_subprocess(self) -> Optional[str]:
+        """Get the system default output device name from a *fresh* PortAudio init.
+
+        PortAudio caches the default-device lookup at Pa_Initialize() time and
+        never refreshes it inside a long-running process — so the watcher
+        can't just call sd.query_devices() from this process and see device
+        changes. A short-lived subprocess gets its own Pa_Initialize and
+        reads the *current* default. ~150ms per call; we run it once a
+        second, which is fine.
+        """
+        try:
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-c",
+                    (
+                        "import sounddevice as sd; "
+                        "info = sd.query_devices(kind='output'); "
+                        "print(info.get('name', '') if isinstance(info, dict) else '', end='')"
+                    ),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            name = result.stdout.strip()
+            return name or None
+        except Exception:  # noqa: BLE001
+            return None
+
     def _watch_default_device(self) -> None:
         """Poll the system default output. If it changed, rebuild the stream."""
         while not self._shutdown.is_set():
             try:
-                info = sd.query_devices(kind="output")
-                name = info.get("name") if isinstance(info, dict) else None
+                name = self._query_current_default_via_subprocess()
                 with self._stream_lock:
                     on_device = self._current_device_name
                 if name and on_device and name != on_device:
@@ -223,7 +265,6 @@ class Player:
                     )
                     with self._stream_lock:
                         self._close_stream_locked()
-                        # Clear residual; the half-played chunk on the old device is gone.
                         with self._residual_lock:
                             self._residual = np.zeros(0, dtype=np.float32)
                         self._open_stream_locked()
