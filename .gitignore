@@ -1,0 +1,38 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Node / Raycast extension
+raycast-extension/node_modules/
+raycast-extension/.raycast/
+raycast-extension/dist/
+raycast-extension/.eslintcache
+
+# Logs and temp
+*.log
+/tmp/kokoro-*.log
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Personal LaunchAgent backups (don't commit your local plists)
+*.plist.bak
+
+# HuggingFace model cache (often symlinked into here during dev)
+.huggingface/
+hf_cache/
+
+# Local-only experiments
+scratch/
+notes-local/

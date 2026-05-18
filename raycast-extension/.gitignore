@@ -1,0 +1,12 @@
+# Raycast extension build artifacts
+node_modules/
+.raycast/
+dist/
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store

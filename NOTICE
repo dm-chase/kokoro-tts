@@ -1,0 +1,67 @@
+Kokoro TTS Local Server
+Copyright (c) 2026 dm-chase
+
+Licensed under the Apache License, Version 2.0 (see LICENSE for details).
+
+This product includes software from the following projects:
+
+Kokoro-82M               Copyright hexgrad — Apache License 2.0
+                         https://huggingface.co/hexgrad/Kokoro-82M
+
+misaki (G2P)             Copyright hexgrad — Apache License 2.0
+                         https://github.com/hexgrad/misaki
+
+phonemizer-fork          Copyright bootphon (forked) — GPL-3.0-or-later
+                         https://pypi.org/project/phonemizer-fork/
+
+eSpeak NG                Copyright eSpeak NG contributors — GPL-3.0-or-later
+                         https://github.com/espeak-ng/espeak-ng
+
+PyTorch                  Copyright PyTorch contributors — BSD-3-Clause
+                         https://github.com/pytorch/pytorch
+
+Transformers             Copyright HuggingFace — Apache License 2.0
+                         https://github.com/huggingface/transformers
+
+huggingface-hub          Copyright HuggingFace — Apache License 2.0
+                         https://github.com/huggingface/huggingface_hub
+
+FastAPI                  Copyright Sebastián Ramírez — MIT
+                         https://github.com/fastapi/fastapi
+
+Uvicorn                  Copyright Encode OSS Ltd — BSD-3-Clause
+                         https://github.com/encode/uvicorn
+
+sounddevice              Copyright Matthias Geier — MIT
+                         https://github.com/spatialaudio/python-sounddevice
+
+PortAudio                Copyright Ross Bencina and Phil Burk — MIT-style
+                         https://www.portaudio.com/license.html
+
+NumPy                    Copyright NumPy Developers — BSD-3-Clause
+                         https://github.com/numpy/numpy
+
+Pydantic                 Copyright Pydantic Services Inc. — MIT
+                         https://github.com/pydantic/pydantic
+
+------------------------------------------------------------------------
+
+Important licensing note (GPL transitive dependencies):
+
+The `phonemizer-fork` Python package and the `eSpeak NG` system binary
+are licensed under GPL-3.0-or-later. When you install this server's
+dependencies and run it, the combined running system on your machine is
+effectively governed by GPL-3.0-or-later.
+
+If you distribute a bundle that embeds phonemizer-fork or eSpeak NG
+binaries (for example, a .pkg installer or brew formula that ships those
+binaries inline), that bundle must be distributed under GPL-3.0-or-later
+with full source available.
+
+The recommended distribution approach — having end users install
+espeak-ng (via `brew install espeak-ng`) and Python dependencies (via
+`pip install`) themselves — avoids that redistribution obligation. The
+server source code in this repository remains Apache-2.0 licensed.
+
+This project is not affiliated with hexgrad, the eSpeak NG project,
+Apple Inc., or Raycast Technologies Ltd.

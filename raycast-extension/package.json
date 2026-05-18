@@ -1,0 +1,117 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "kokoro-tts",
+  "title": "Kokoro TTS",
+  "description": "Local Kokoro 82M text-to-speech — voice picker, hotkeys, no cloud.",
+  "icon": "extension-icon.png",
+  "author": "dm-chase",
+  "license": "MIT",
+  "platforms": [
+    "macOS"
+  ],
+  "categories": [
+    "Productivity",
+    "Media"
+  ],
+  "keywords": [
+    "tts",
+    "text-to-speech",
+    "speech",
+    "voice",
+    "read aloud",
+    "kokoro",
+    "speaker",
+    "narrate"
+  ],
+  "preferences": [
+    {
+      "name": "backend",
+      "title": "TTS Backend",
+      "description": "Auto prefers Kokoro if its local server is reachable, otherwise uses the macOS system voice (no install needed).",
+      "type": "dropdown",
+      "default": "auto",
+      "required": false,
+      "data": [
+        { "title": "Auto — Kokoro if available, otherwise System", "value": "auto" },
+        { "title": "Kokoro server (premium quality)", "value": "kokoro" },
+        { "title": "System (macOS say)", "value": "say" }
+      ]
+    },
+    {
+      "name": "serverUrl",
+      "title": "Kokoro server URL",
+      "description": "Where your local Kokoro server is listening (only relevant when the Kokoro backend is in use).",
+      "type": "textfield",
+      "default": "http://127.0.0.1:8123",
+      "placeholder": "http://127.0.0.1:8123",
+      "required": false
+    }
+  ],
+  "commands": [
+    {
+      "name": "speak-selection",
+      "title": "Speak Selection",
+      "subtitle": "Kokoro TTS",
+      "description": "Read the currently selected text aloud",
+      "mode": "no-view",
+      "icon": "speak-selection.png",
+      "keywords": ["read", "aloud", "highlight"]
+    },
+    {
+      "name": "stop-speaking",
+      "title": "Stop Speaking",
+      "subtitle": "Kokoro TTS",
+      "description": "Stop any in-progress utterance",
+      "mode": "no-view",
+      "icon": "stop-speaking.png",
+      "keywords": ["mute", "silence", "cancel"]
+    },
+    {
+      "name": "speak-clipboard",
+      "title": "Speak Clipboard",
+      "subtitle": "Kokoro TTS",
+      "description": "Read the current clipboard contents aloud",
+      "mode": "no-view",
+      "icon": "speak-clipboard.png",
+      "keywords": ["paste", "read", "aloud"]
+    },
+    {
+      "name": "speak-text",
+      "title": "Speak Text",
+      "subtitle": "Kokoro TTS",
+      "description": "Type or paste text to read aloud, with voice + speed override",
+      "mode": "view",
+      "icon": "speak-text.png",
+      "keywords": ["type", "compose", "write"]
+    },
+    {
+      "name": "voices",
+      "title": "Voices",
+      "subtitle": "Kokoro TTS",
+      "description": "Browse voices, preview, and choose a default",
+      "mode": "view",
+      "icon": "voices.png",
+      "keywords": ["picker", "select", "default"]
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^1.85.0",
+    "@raycast/utils": "^1.18.0"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^1.0.11",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.10",
+    "eslint": "^8.57.1",
+    "prettier": "^3.4.2",
+    "react": "^19.0.0",
+    "typescript": "^5.7.2"
+  },
+  "scripts": {
+    "build": "ray build",
+    "dev": "ray develop",
+    "lint": "ray lint",
+    "fix-lint": "ray lint --fix",
+    "publish": "npx @raycast/api@latest publish"
+  }
+}
