@@ -10,7 +10,12 @@
  * voices have different IDs and can't be mixed). Speed is shared.
  */
 import { getPreferenceValues, LocalStorage } from "@raycast/api";
-import { kokoroHealth, kokoroSpeak, kokoroStop, KokoroHealth } from "./backend/kokoro";
+import {
+  kokoroHealth,
+  kokoroSpeak,
+  kokoroStop,
+  KokoroHealth,
+} from "./backend/kokoro";
 import { listSayVoices, saySpeak, sayStop, SayVoice } from "./backend/say";
 
 export type Backend = "kokoro" | "say";
@@ -57,7 +62,10 @@ export interface SpeakOptions {
   clean?: boolean;
 }
 
-export async function speak(text: string, opts: SpeakOptions = {}): Promise<void> {
+export async function speak(
+  text: string,
+  opts: SpeakOptions = {},
+): Promise<void> {
   const backend = opts.voiceBackend ?? (await getActiveBackend());
   const speed = opts.speed ?? (await getDefaultSpeed());
   const voice = opts.voice ?? (await getDefaultVoice(backend));
@@ -114,8 +122,13 @@ export async function getDefaultVoice(backend: Backend): Promise<string> {
   if (backend === "kokoro") {
     const legacy = await LocalStorage.getItem<string>(LEGACY_VOICE_KEY);
     const legacyParsed = readJson<unknown>(legacy);
-    if (typeof legacyParsed === "string" && legacyParsed.length > 0) return legacyParsed;
-    if (typeof legacy === "string" && legacy.length > 0 && !legacy.startsWith('"')) {
+    if (typeof legacyParsed === "string" && legacyParsed.length > 0)
+      return legacyParsed;
+    if (
+      typeof legacy === "string" &&
+      legacy.length > 0 &&
+      !legacy.startsWith('"')
+    ) {
       return legacy;
     }
   }
@@ -123,8 +136,14 @@ export async function getDefaultVoice(backend: Backend): Promise<string> {
   return backend === "kokoro" ? KOKORO_DEFAULT_VOICE : "Samantha";
 }
 
-export async function setDefaultVoice(backend: Backend, voiceId: string): Promise<void> {
-  await LocalStorage.setItem(SELECTED_VOICE_KEYS[backend], JSON.stringify(voiceId));
+export async function setDefaultVoice(
+  backend: Backend,
+  voiceId: string,
+): Promise<void> {
+  await LocalStorage.setItem(
+    SELECTED_VOICE_KEYS[backend],
+    JSON.stringify(voiceId),
+  );
 }
 
 export function selectedVoiceKey(backend: Backend): string {

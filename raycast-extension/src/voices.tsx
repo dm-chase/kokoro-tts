@@ -8,7 +8,11 @@ import {
   openExtensionPreferences,
   showHUD,
 } from "@raycast/api";
-import { showFailureToast, useCachedPromise, useLocalStorage } from "@raycast/utils";
+import {
+  showFailureToast,
+  useCachedPromise,
+  useLocalStorage,
+} from "@raycast/utils";
 import { useRef } from "react";
 import {
   Backend,
@@ -23,7 +27,11 @@ import {
   SPEED_PRESETS,
   stop,
 } from "./lib/api";
-import { DEFAULT_VOICE_ID, VOICES as KOKORO_VOICES, Voice as KokoroVoice } from "./lib/voices";
+import {
+  DEFAULT_VOICE_ID,
+  VOICES as KOKORO_VOICES,
+  Voice as KokoroVoice,
+} from "./lib/voices";
 
 const PREVIEW_TEXT =
   "Hello — this is what I sound like. The quick brown fox jumps over the lazy dog.";
@@ -60,17 +68,20 @@ export default function Command() {
     abortable,
   });
 
-  const { data: sayVoices = [], isLoading: sayVoicesLoading } = useCachedPromise(
-    () => listSayVoices(),
-    [],
-    { keepPreviousData: true },
-  );
+  const { data: sayVoices = [], isLoading: sayVoicesLoading } =
+    useCachedPromise(() => listSayVoices(), [], { keepPreviousData: true });
 
   const isLoading =
-    kokoroDefaultLoading || sayDefaultLoading || speedLoading || healthLoading || sayVoicesLoading;
+    kokoroDefaultLoading ||
+    sayDefaultLoading ||
+    speedLoading ||
+    healthLoading ||
+    sayVoicesLoading;
 
-  const kokoroReachable = health?.kokoro.ok === true && health.kokoro.status === "ok";
-  const kokoroLoading = health?.kokoro.ok === false && health.kokoro.status === "loading";
+  const kokoroReachable =
+    health?.kokoro.ok === true && health.kokoro.status === "ok";
+  const kokoroLoading =
+    health?.kokoro.ok === false && health.kokoro.status === "loading";
   const sayAvailable = health?.sayAvailable === true;
   const activeBackend = health?.active ?? "say";
 
@@ -80,12 +91,19 @@ export default function Command() {
     } catch (e) {
       await showFailureToast(e, {
         title: "Preview failed",
-        primaryAction: { title: "Open Preferences", onAction: () => openExtensionPreferences() },
+        primaryAction: {
+          title: "Open Preferences",
+          onAction: () => openExtensionPreferences(),
+        },
       });
     }
   }
 
-  async function setDefault(backend: Backend, voiceId: string, displayName: string) {
+  async function setDefault(
+    backend: Backend,
+    voiceId: string,
+    displayName: string,
+  ) {
     if (backend === "kokoro") await setKokoroDefault(voiceId);
     else await setSayDefault(voiceId);
     await showHUD(`✨  Default ${backend} voice: ${displayName}`);
@@ -117,12 +135,20 @@ export default function Command() {
   // Non-English say voices
   const otherSayVoices = sayVoices
     .filter((v) => !v.locale.startsWith("en_"))
-    .sort((a, b) => a.language.localeCompare(b.language) || a.name.localeCompare(b.name));
+    .sort(
+      (a, b) =>
+        a.language.localeCompare(b.language) || a.name.localeCompare(b.name),
+    );
 
   const statusLabel = (() => {
-    if (kokoroLoading) return `Kokoro loading model · ${speed ?? DEFAULT_SPEED}×`;
+    if (kokoroLoading)
+      return `Kokoro loading model · ${speed ?? DEFAULT_SPEED}×`;
     const backendLabel = activeBackend === "kokoro" ? "Kokoro" : "macOS";
-    const statusBit = kokoroReachable ? "Kokoro ready" : sayAvailable ? "Kokoro offline" : "no backend";
+    const statusBit = kokoroReachable
+      ? "Kokoro ready"
+      : sayAvailable
+        ? "Kokoro offline"
+        : "no backend";
     return `${backendLabel} · ${statusBit} · ${speed ?? DEFAULT_SPEED}×`;
   })();
 
@@ -141,7 +167,11 @@ export default function Command() {
           storeValue={false}
         >
           {SPEED_PRESETS.map((s) => (
-            <List.Dropdown.Item key={s} title={`${s}× speed`} value={String(s)} />
+            <List.Dropdown.Item
+              key={s}
+              title={`${s}× speed`}
+              value={String(s)}
+            />
           ))}
         </List.Dropdown>
       }
@@ -153,7 +183,11 @@ export default function Command() {
           description="The Kokoro server isn't reachable and the macOS `say` command isn't responding."
           actions={
             <ActionPanel>
-              <Action title="Retry" icon={Icon.ArrowClockwise} onAction={revalidateHealth} />
+              <Action
+                title="Retry"
+                icon={Icon.ArrowClockwise}
+                onAction={revalidateHealth}
+              />
               <Action
                 title="Open Extension Preferences"
                 icon={Icon.Gear}
@@ -166,7 +200,10 @@ export default function Command() {
         <>
           {kokoroReachable && (
             <>
-              <List.Section title="Kokoro · Female" subtitle={`${getKokoroServerUrl()}`}>
+              <List.Section
+                title="Kokoro · Female"
+                subtitle={`${getKokoroServerUrl()}`}
+              >
                 {KOKORO_VOICES.filter((v) => v.gender === "female").map((v) => (
                   <KokoroVoiceRow
                     key={v.id}
@@ -201,7 +238,9 @@ export default function Command() {
                 title="Kokoro server is offline"
                 subtitle={`Tried ${getKokoroServerUrl()}`}
                 icon={{ source: Icon.Plug, tintColor: Color.SecondaryText }}
-                accessories={[{ tag: { value: "premium upgrade", color: Color.Orange } }]}
+                accessories={[
+                  { tag: { value: "premium upgrade", color: Color.Orange } },
+                ]}
                 actions={
                   <ActionPanel>
                     <Action
@@ -222,7 +261,10 @@ export default function Command() {
           )}
 
           {sayAvailable && englishSayVoices.length > 0 && (
-            <List.Section title="macOS · English" subtitle="installed system voices">
+            <List.Section
+              title="macOS · English"
+              subtitle="installed system voices"
+            >
               {englishSayVoices.map((v) => (
                 <SayVoiceRow
                   key={`${v.id}-${v.locale}`}
@@ -285,7 +327,10 @@ function KokoroVoiceRow({
       accessories={[
         { tag: { value: voice.id, color: Color.Purple } },
         selected
-          ? { icon: { source: Icon.Star, tintColor: Color.Yellow }, tooltip: "Default Kokoro voice" }
+          ? {
+              icon: { source: Icon.Star, tintColor: Color.Yellow },
+              tooltip: "Default Kokoro voice",
+            }
           : {},
       ].filter((a) => Object.keys(a).length > 0)}
       actions={
@@ -347,7 +392,11 @@ function SayVoiceRow({
   onRefresh: () => void;
 }) {
   const tierColor =
-    voice.tier === "premium" ? Color.Green : voice.tier === "enhanced" ? Color.Blue : Color.SecondaryText;
+    voice.tier === "premium"
+      ? Color.Green
+      : voice.tier === "enhanced"
+        ? Color.Blue
+        : Color.SecondaryText;
   return (
     <List.Item
       title={voice.name}
@@ -363,7 +412,10 @@ function SayVoiceRow({
           ? { tag: { value: voice.tier, color: tierColor } }
           : {},
         selected
-          ? { icon: { source: Icon.Star, tintColor: Color.Yellow }, tooltip: "Default macOS voice" }
+          ? {
+              icon: { source: Icon.Star, tintColor: Color.Yellow },
+              tooltip: "Default macOS voice",
+            }
           : {},
       ].filter((a) => Object.keys(a).length > 0)}
       actions={

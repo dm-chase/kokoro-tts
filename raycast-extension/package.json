@@ -4,7 +4,7 @@
   "title": "Kokoro TTS",
   "description": "Local Kokoro 82M text-to-speech — voice picker, hotkeys, no cloud.",
   "icon": "extension-icon.png",
-  "author": "dm-chase",
+  "author": "timber_designs",
   "license": "MIT",
   "platforms": [
     "macOS"

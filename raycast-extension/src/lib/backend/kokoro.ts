@@ -27,7 +27,11 @@ export function getKokoroServerUrl(): string {
   return (raw && raw.length > 0 ? raw : DEFAULT_URL).replace(/\/+$/, "");
 }
 
-async function postJson(path: string, body: object, timeoutMs = 5000): Promise<Response> {
+async function postJson(
+  path: string,
+  body: object,
+  timeoutMs = 5000,
+): Promise<Response> {
   const url = `${getKokoroServerUrl()}${path}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -43,7 +47,10 @@ async function postJson(path: string, body: object, timeoutMs = 5000): Promise<R
   }
 }
 
-export async function kokoroSpeak(text: string, opts: KokoroSpeakOptions = {}): Promise<void> {
+export async function kokoroSpeak(
+  text: string,
+  opts: KokoroSpeakOptions = {},
+): Promise<void> {
   let res: Response;
   try {
     res = await postJson("/speak", {
@@ -63,9 +70,13 @@ export async function kokoroSpeak(text: string, opts: KokoroSpeakOptions = {}): 
   if (!res.ok) {
     const body = await safeText(res);
     if (res.status === 503) {
-      throw new Error(`Kokoro server is still loading the model — try again in a moment`);
+      throw new Error(
+        `Kokoro server is still loading the model — try again in a moment`,
+      );
     }
-    throw new Error(`Kokoro server returned ${res.status}: ${body || res.statusText}`);
+    throw new Error(
+      `Kokoro server returned ${res.status}: ${body || res.statusText}`,
+    );
   }
 }
 
@@ -90,16 +101,26 @@ export async function kokoroHealth(timeoutMs = 1500): Promise<KokoroHealth> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(`${getKokoroServerUrl()}/health`, { signal: controller.signal });
+    const res = await fetch(`${getKokoroServerUrl()}/health`, {
+      signal: controller.signal,
+    });
     let body: { status?: string; error?: string } = {};
     try {
       body = (await res.json()) as { status?: string; error?: string };
     } catch {
       body = {};
     }
-    return { ok: res.ok, status: body.status ?? (res.ok ? "ok" : "error"), error: body.error };
+    return {
+      ok: res.ok,
+      status: body.status ?? (res.ok ? "ok" : "error"),
+      error: body.error,
+    };
   } catch (e) {
-    return { ok: false, status: "unreachable", error: e instanceof Error ? e.message : String(e) };
+    return {
+      ok: false,
+      status: "unreachable",
+      error: e instanceof Error ? e.message : String(e),
+    };
   } finally {
     clearTimeout(timer);
   }

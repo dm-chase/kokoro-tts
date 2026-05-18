@@ -84,7 +84,9 @@ export async function listSayVoices(): Promise<SayVoice[]> {
     const trimmed = line.trimEnd();
     if (!trimmed) continue;
     // Match: "<name with optional spaces & parens>  <locale>  # <sample>"
-    const match = trimmed.match(/^(.+?)\s{2,}([a-z]{2,3}_[A-Z]{2})\s+#\s+(.*)$/);
+    const match = trimmed.match(
+      /^(.+?)\s{2,}([a-z]{2,3}_[A-Z]{2})\s+#\s+(.*)$/,
+    );
     if (!match) continue;
     const [, name, locale, sample] = match;
     voices.push({
@@ -116,9 +118,13 @@ async function readActivePid(): Promise<number | null> {
   // Verify the process is alive AND is actually `say` (defends against
   // PID reuse — kernel could have reassigned this PID to an unrelated process).
   try {
-    const { stdout } = await execFileAsync("ps", ["-p", String(pid), "-o", "comm="], {
-      encoding: "utf8",
-    });
+    const { stdout } = await execFileAsync(
+      "ps",
+      ["-p", String(pid), "-o", "comm="],
+      {
+        encoding: "utf8",
+      },
+    );
     if (!stdout.trim().endsWith("say")) return null;
   } catch {
     return null;
@@ -152,7 +158,10 @@ export interface SaySpeakOptions {
   clean?: boolean;
 }
 
-export async function saySpeak(text: string, opts: SaySpeakOptions = {}): Promise<void> {
+export async function saySpeak(
+  text: string,
+  opts: SaySpeakOptions = {},
+): Promise<void> {
   const speed = opts.speed ?? 1.0;
   const cleaned = opts.clean === false ? text : cleanForTts(text);
   if (!cleaned.trim()) return;

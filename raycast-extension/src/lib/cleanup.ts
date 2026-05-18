@@ -9,6 +9,7 @@
  * Order matters: strip code fences before inline code, links before bare
  * URLs, headers/bold/italic before whitespace normalization.
  */
+// eslint-disable-next-line no-control-regex
 const ANSI = /\x1b\[[0-9;]*[a-zA-Z]/g;
 const CODE_FENCE = /```[\s\S]*?```/g;
 const INLINE_CODE = /`([^`\n]+)`/g;

@@ -48,34 +48,27 @@ function decodeVoice(encoded: string): { backend: Backend; voiceId: string } {
 }
 
 export default function Command() {
-  const { value: kokoroDefault, isLoading: kokoroDefaultLoading } = useLocalStorage<string>(
-    selectedVoiceKey("kokoro"),
-    DEFAULT_VOICE_ID,
-  );
-  const { value: sayDefault, isLoading: sayDefaultLoading } = useLocalStorage<string>(
-    selectedVoiceKey("say"),
-    "Samantha",
-  );
-  const { value: defaultSpeed, isLoading: speedLoading } = useLocalStorage<number>(
-    SELECTED_SPEED_KEY,
-    DEFAULT_SPEED,
-  );
+  const { value: kokoroDefault, isLoading: kokoroDefaultLoading } =
+    useLocalStorage<string>(selectedVoiceKey("kokoro"), DEFAULT_VOICE_ID);
+  const { value: sayDefault, isLoading: sayDefaultLoading } =
+    useLocalStorage<string>(selectedVoiceKey("say"), "Samantha");
+  const { value: defaultSpeed, isLoading: speedLoading } =
+    useLocalStorage<number>(SELECTED_SPEED_KEY, DEFAULT_SPEED);
 
-  const { data: health, isLoading: healthLoading } = useCachedPromise(() => checkHealth(), [], {
-    keepPreviousData: true,
-  });
-  const { data: sayVoices = [], isLoading: sayVoicesLoading } = useCachedPromise(
-    () => listSayVoices(),
+  const { data: health, isLoading: healthLoading } = useCachedPromise(
+    () => checkHealth(),
     [],
-    { keepPreviousData: true },
+    {
+      keepPreviousData: true,
+    },
   );
-  const { data: activeBackend, isLoading: activeBackendLoading } = useCachedPromise(
-    () => getActiveBackend(),
-    [],
-    { keepPreviousData: true },
-  );
+  const { data: sayVoices = [], isLoading: sayVoicesLoading } =
+    useCachedPromise(() => listSayVoices(), [], { keepPreviousData: true });
+  const { data: activeBackend, isLoading: activeBackendLoading } =
+    useCachedPromise(() => getActiveBackend(), [], { keepPreviousData: true });
 
-  const kokoroReachable = health?.kokoro.ok === true && health.kokoro.status === "ok";
+  const kokoroReachable =
+    health?.kokoro.ok === true && health.kokoro.status === "ok";
   const englishSayVoices = sayVoices
     .filter((v) => v.locale.startsWith("en_"))
     .sort((a, b) => {
@@ -107,7 +100,10 @@ export default function Command() {
       } catch (e) {
         await showFailureToast(e, {
           title: "Couldn't speak",
-          primaryAction: { title: "Open Preferences", onAction: () => openExtensionPreferences() },
+          primaryAction: {
+            title: "Open Preferences",
+            onAction: () => openExtensionPreferences(),
+          },
         });
       }
     },
@@ -138,7 +134,11 @@ export default function Command() {
       enableDrafts
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Speak" icon={Icon.SpeakerOn} onSubmit={handleSubmit} />
+          <Action.SubmitForm
+            title="Speak"
+            icon={Icon.SpeakerOn}
+            onSubmit={handleSubmit}
+          />
           <Action
             title="Open Extension Preferences"
             icon={Icon.Gear}
