@@ -14,8 +14,6 @@
 # To install directly from this formula file (during local development):
 #   brew install --HEAD --build-from-source ./Formula/kokoro-tts-server.rb
 class KokoroTtsServer < Formula
-  include Language::Python::Virtualenv
-
   desc "Local Kokoro 82M text-to-speech HTTP server with multi-voice support"
   homepage "https://github.com/dm-chase/kokoro-tts"
   url "https://github.com/dm-chase/kokoro-tts/archive/refs/tags/v0.1.0.tar.gz"
@@ -27,35 +25,25 @@ class KokoroTtsServer < Formula
   depends_on "python@3.11"
 
   def install
-    # Build a virtualenv inside libexec so the Python interpreter and all
-    # Kokoro deps (torch, transformers, sounddevice, etc.) stay isolated from
-    # the system Python and from any other brew Python formulas.
-    venv = virtualenv_create(libexec, "python3.11")
+    # Build a plain isolated virtualenv (NOT --system-site-packages) and use
+    # its own pip to install everything. Brew's `virtualenv_create` +
+    # `pip_install` helpers were dropping transitive deps in this stack
+    # (kokoro → loguru, misaki, transformers, etc. were all missed). A plain
+    # `python -m venv` + `bin/pip install` resolves the full dep graph.
+    system Formula["python@3.11"].opt_bin/"python3.11", "-m", "venv", libexec
+    system libexec/"bin/pip", "install", "--quiet", "--upgrade", "pip"
+    system libexec/"bin/pip", "install", "--quiet",
+           "kokoro",
+           "fastapi",
+           "uvicorn[standard]",
+           "sounddevice",
+           "numpy"
 
-    # Install Kokoro + server deps. This pulls torch (~700MB on first install)
-    # plus transformers and the misaki G2P stack. The actual model weights
-    # download lazily on first /speak — keeps `brew install` from blocking
-    # on a separate ~330MB HuggingFace fetch.
-    # Explicitly include `cffi` because brew's --system-site-packages venv
-    # doesn't inherit it from python@3.11, but `sounddevice` requires it at
-    # import time. Resolved transitively in normal pip installs but not in
-    # brew's pip injection — list it explicitly to make installs hermetic.
-    venv.pip_install [
-      "cffi",
-      "kokoro",
-      "fastapi",
-      "uvicorn[standard]",
-      "sounddevice",
-      "numpy",
-    ]
-
-    # Install the server module into libexec so the brew-managed Python can
-    # find it.
+    # Install the server module so the brew-managed Python can find it.
     libexec.install "kokoro_server.py"
 
-    # Wrapper script in bin invokes the venv'd python with our server module.
-    # We avoid shebang-magic and just exec the absolute paths — survives
-    # users having unusual PATH setups under launchd.
+    # Wrapper script in bin invokes the venv'd python with our server.
+    # Absolute paths so it works under any launchd PATH.
     (bin/"kokoro-tts-server").write <<~SH
       #!/bin/bash
       exec "#{libexec}/bin/python" "#{libexec}/kokoro_server.py" "$@"
