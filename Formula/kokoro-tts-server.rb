@@ -19,10 +19,7 @@ class KokoroTtsServer < Formula
   desc "Local Kokoro 82M text-to-speech HTTP server with multi-voice support"
   homepage "https://github.com/dm-chase/kokoro-tts"
   url "https://github.com/dm-chase/kokoro-tts/archive/refs/tags/v0.1.0.tar.gz"
-  # Run `shasum -a 256 v0.1.0.tar.gz` after creating the GitHub release tag and
-  # replace this placeholder. The string below is a 64-char zero so brew style
-  # accepts the formula; the URL above won't resolve until the tag exists.
-  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+  sha256 "272e376653505fd734a29731c1f0d991ea88144cc1bd19f994485c77cd98a8d1"
   license "Apache-2.0"
   head "https://github.com/dm-chase/kokoro-tts.git", branch: "main"
 
