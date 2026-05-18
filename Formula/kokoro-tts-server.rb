@@ -36,7 +36,12 @@ class KokoroTtsServer < Formula
     # plus transformers and the misaki G2P stack. The actual model weights
     # download lazily on first /speak — keeps `brew install` from blocking
     # on a separate ~330MB HuggingFace fetch.
+    # Explicitly include `cffi` because brew's --system-site-packages venv
+    # doesn't inherit it from python@3.11, but `sounddevice` requires it at
+    # import time. Resolved transitively in normal pip installs but not in
+    # brew's pip injection — list it explicitly to make installs hermetic.
     venv.pip_install [
+      "cffi",
       "kokoro",
       "fastapi",
       "uvicorn[standard]",
