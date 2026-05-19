@@ -336,12 +336,25 @@ function KokoroVoiceRow({
       actions={
         <ActionPanel>
           <ActionPanel.Section>
-            <Action title="Preview" icon={Icon.Play} onAction={onPreview} />
+            {/*
+             * Primary action: pressing Enter on a voice should DO THE OBVIOUS
+             * THING — make this the default AND let the user hear it. The
+             * earlier ordering (Preview first) silently confused users into
+             * thinking they'd selected a voice when they'd only sampled it.
+             */}
             <Action
-              title="Set as Default Kokoro Voice"
+              title="Use This Voice"
               icon={Icon.Star}
-              shortcut={Keyboard.Shortcut.Common.Save}
-              onAction={onChoose}
+              onAction={async () => {
+                await onChoose();
+                await onPreview();
+              }}
+            />
+            <Action
+              title="Preview Only"
+              icon={Icon.Play}
+              shortcut={{ modifiers: ["cmd"], key: "p" }}
+              onAction={onPreview}
             />
           </ActionPanel.Section>
           <ActionPanel.Section>
@@ -421,12 +434,19 @@ function SayVoiceRow({
       actions={
         <ActionPanel>
           <ActionPanel.Section>
-            <Action title="Preview" icon={Icon.Play} onAction={onPreview} />
             <Action
-              title="Set as Default macOS Voice"
+              title="Use This Voice"
               icon={Icon.Star}
-              shortcut={Keyboard.Shortcut.Common.Save}
-              onAction={onChoose}
+              onAction={async () => {
+                await onChoose();
+                await onPreview();
+              }}
+            />
+            <Action
+              title="Preview Only"
+              icon={Icon.Play}
+              shortcut={{ modifiers: ["cmd"], key: "p" }}
+              onAction={onPreview}
             />
           </ActionPanel.Section>
           <ActionPanel.Section>
