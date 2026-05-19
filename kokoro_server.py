@@ -201,12 +201,19 @@ class Player:
             name = "(unknown)"
 
         # device=None means "use the current system default at the moment of open".
+        # blocksize=2048 (≈85ms at 24kHz) gives the Python audio callback enough
+        # headroom to absorb GIL pauses and other thread-scheduling jitter.
+        # PortAudio's default (0 = host-chosen, typically 256 samples ≈ 11ms on
+        # Bluetooth devices) was too tight — the callback would miss deadlines
+        # under any Python contention, producing audible clicks at buffer
+        # boundaries. Trade-off: slightly higher latency for /stop (≈85ms vs
+        # ≈11ms), which is imperceptible.
         self._stream = sd.OutputStream(
             samplerate=self.sample_rate,
             channels=1,
             dtype="float32",
             callback=self._callback,
-            blocksize=0,
+            blocksize=2048,
             device=None,
         )
         self._stream.start()
@@ -410,14 +417,53 @@ def _to_numpy(audio) -> np.ndarray:
     return np.asarray(audio, dtype=np.float32)
 
 
+# Per-chunk edge fade length in samples. 10ms at 24kHz = 240 samples.
+# Each Kokoro chunk is a self-contained per-sentence generation; the waveform
+# doesn't naturally join chunk-to-chunk. Naive concatenation produces a
+# sub-millisecond "jump" at every boundary, audible as a click.
+#
+# Strategy: ramp each chunk's first and last EDGE_FADE_SAMPLES from/to zero.
+# Sinusoidal ramps have zero slope at the endpoints (C¹ continuous) — no
+# residual click from a derivative kink, unlike linear ramps.
+#
+# Why edge fades and not overlap-add: overlap-add assumes the next chunk
+# arrives before the current one finishes playing. When Kokoro generation
+# lags briefly (CPU spike, GC, model swap), the queue empties between
+# chunks → playback returns to silence → the next chunk's overlap-add head
+# starts at a non-zero sample → click after the silence. Edge fades make
+# every chunk start at zero and end at zero, so inter-chunk silence (when
+# it happens) is zero→silence→zero. Click-free regardless of timing.
+EDGE_FADE_SAMPLES = 240
+_ef_ramp = np.arange(EDGE_FADE_SAMPLES, dtype=np.float32) / max(EDGE_FADE_SAMPLES - 1, 1)
+_FADE_IN = np.sin(0.5 * np.pi * _ef_ramp).astype(np.float32)
+_FADE_OUT = np.cos(0.5 * np.pi * _ef_ramp).astype(np.float32)
+
+
+def _edge_fade(chunk: np.ndarray) -> np.ndarray:
+    """Return a copy of `chunk` with sinusoidal fades on the first/last
+    EDGE_FADE_SAMPLES. Chunks too short to safely fade both ends pass through."""
+    n = EDGE_FADE_SAMPLES
+    if chunk.size < 2 * n:
+        return chunk
+    out = chunk.copy()
+    out[:n] *= _FADE_IN
+    out[-n:] *= _FADE_OUT
+    return out
+
+
 def _generation_worker(text: str, voice: str, speed: float, gen_id: int) -> None:
-    """Generate Kokoro audio and push chunks to the player. Preempted by gen-id check."""
+    """Generate Kokoro audio and push chunks to the player. Preempted by gen-id check.
+
+    Each chunk is edge-faded before pushing so that inter-chunk silence
+    (when generation lags playback) is zero→silence→zero — click-free
+    regardless of how the audio callback's timing lines up.
+    """
     try:
         for _graphemes, _phonemes, audio in pipeline(text, voice=voice, speed=speed):
             # Bail out cheaply if a newer /speak has arrived.
             if gen_id != _current_gen_id:
                 return
-            chunk = _to_numpy(audio)
+            chunk = _edge_fade(_to_numpy(audio))
             # Atomic check-and-push w.r.t. drain() under _state_lock.
             with _state_lock:
                 if gen_id != _current_gen_id:
