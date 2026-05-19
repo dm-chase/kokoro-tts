@@ -12,6 +12,7 @@ import re
 import subprocess
 import sys
 import threading
+import time
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -157,6 +158,10 @@ class Player:
         self._current_device_name: Optional[str] = None
         self._shutdown = threading.Event()
         self._watcher: Optional[threading.Thread] = None
+        # Monotonic timestamp of the most recent callback that wrote real audio
+        # (not silence). The device watcher reads this to decide whether the
+        # pipeline is idle enough to safely rebuild the stream.
+        self._last_audio_at: float = 0.0
         self.sample_rate = sample_rate
 
     def start(self) -> None:
@@ -250,24 +255,74 @@ class Player:
         except Exception:  # noqa: BLE001
             return None
 
+    # Debounce window: a new device must be observed continuously for this long
+    # before we commit to rebuilding the stream. Bluetooth devices generate lots
+    # of spurious change events (Continuity handoff, RF blips, packet drops);
+    # without debouncing we'd thrash the audio stream multiple times per second,
+    # producing audible crackles and eventually killing PortAudio outright.
+    DEVICE_CHANGE_DEBOUNCE_SEC = 2.5
+
+    # How long since the last non-silent audio callback we consider "idle".
+    # Rebuilds happen only when idle, so a mid-utterance device change defers
+    # until the current utterance finishes. 0.5s tolerates inter-chunk gaps.
+    IDLE_THRESHOLD_SEC = 0.5
+
     def _watch_default_device(self) -> None:
-        """Poll the system default output. If it changed, rebuild the stream."""
+        """Poll the system default output; rebuild the stream when it *stably* changes.
+
+        Two safety gates on top of raw "did the name differ?":
+          1. Debounce: the new name must be observed for DEVICE_CHANGE_DEBOUNCE_SEC
+             before we commit. Flapping devices (A→B→A in <2s) get filtered out.
+          2. Idle gate: even after debounce, defer the rebuild if audio is
+             actively playing. The rebuild involves a Pa_Terminate/Pa_Initialize
+             cycle that drops the current frame audibly; better to wait for the
+             utterance to finish than crackle through it.
+        """
+        pending_name: Optional[str] = None
+        pending_since: Optional[float] = None
+
         while not self._shutdown.is_set():
             try:
-                name = self._query_current_default_via_subprocess()
+                observed = self._query_current_default_via_subprocess()
                 with self._stream_lock:
                     on_device = self._current_device_name
-                if name and on_device and name != on_device:
-                    print(
-                        f"[kokoro] default output changed: {on_device!r} → {name!r}; rebuilding",
-                        file=sys.stderr,
-                        flush=True,
-                    )
-                    with self._stream_lock:
-                        self._close_stream_locked()
-                        with self._residual_lock:
-                            self._residual = np.zeros(0, dtype=np.float32)
-                        self._open_stream_locked()
+
+                if observed and on_device and observed != on_device:
+                    # We're bound to one device but the OS default says another.
+                    if observed != pending_name:
+                        # Either first detection of this transition, or a *different*
+                        # new candidate appeared mid-debounce — restart the timer.
+                        pending_name = observed
+                        pending_since = time.monotonic()
+                    elif pending_since and (time.monotonic() - pending_since) >= self.DEVICE_CHANGE_DEBOUNCE_SEC:
+                        # Stable long enough. Check whether audio is in flight.
+                        is_active = (
+                            self._queue.qsize() > 0
+                            or self._residual.size > 0
+                            or (time.monotonic() - self._last_audio_at) < self.IDLE_THRESHOLD_SEC
+                        )
+                        if not is_active:
+                            print(
+                                f"[kokoro] default output stable for "
+                                f"{self.DEVICE_CHANGE_DEBOUNCE_SEC}s: "
+                                f"{on_device!r} → {observed!r}; rebuilding",
+                                file=sys.stderr,
+                                flush=True,
+                            )
+                            with self._stream_lock:
+                                self._close_stream_locked()
+                                with self._residual_lock:
+                                    self._residual = np.zeros(0, dtype=np.float32)
+                                self._open_stream_locked()
+                            pending_name = None
+                            pending_since = None
+                        # If active, keep pending state and re-check next tick —
+                        # the rebuild lands the moment audio idles.
+                else:
+                    # No change OR the OS flapped back to what we're bound to.
+                    # Either way, cancel any pending rebuild.
+                    pending_name = None
+                    pending_since = None
             except Exception as exc:  # noqa: BLE001
                 print(f"[kokoro] device watcher tick error: {exc}", file=sys.stderr, flush=True)
             self._shutdown.wait(timeout=1.0)
@@ -295,7 +350,8 @@ class Player:
 
     def _callback(self, outdata: np.ndarray, frames: int, _time, status) -> None:
         # NOTE: this runs on the audio thread. NO blocking, NO prints,
-        # NO Python allocations beyond numpy slices.
+        # NO Python allocations beyond numpy slices. time.monotonic() is fine
+        # (single syscall, no alloc) and float assignment is atomic on 64-bit.
         if status:
             # XRun / underflow — fine to let it through, audio thread shouldn't print.
             pass
@@ -316,7 +372,7 @@ class Player:
             try:
                 chunk = self._queue.get_nowait()
             except queue.Empty:
-                return  # rest of outdata stays silent (already zeroed)
+                break  # rest of outdata stays silent (already zeroed)
 
             n = min(chunk.size, frames - written)
             outdata[written:written + n, 0] = chunk[:n]
@@ -328,7 +384,12 @@ class Player:
                         self._residual = np.concatenate([self._residual, chunk[n:]])
                     else:
                         self._residual = chunk[n:]
-                return
+                break
+
+        # Record activity timestamp so the device watcher can tell whether
+        # the pipeline is idle (safe to rebuild) or in mid-utterance.
+        if written > 0:
+            self._last_audio_at = time.monotonic()
 
 
 player = Player(SAMPLE_RATE)
